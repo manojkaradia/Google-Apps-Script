@@ -1,0 +1,37 @@
+//1. Function to create Menu Items
+function onOpen(){
+  const ui= SpreadsheetApp.getUi();
+  const menu= ui.createMenu("Update");
+  menu.addItem('Menu', 'updateMenuFromSheet');
+  //menu.addItem('Fee Receipt', 'fillTempletInvoice');
+  menu.addToUi();
+}
+
+//2. Function to update Menu Items
+function updateMenuFromSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const dataSheet = ss.getSheetByName("MENU"); // Sheet containing the dropdown options
+  const dataSheetValues = dataSheet.getDataRange().getValues(); // Sheet containing the dropdown options
+  const form = FormApp.openByUrl("https://docs.google.com/forms/d/10Wqc5HBj8afVWE_TaUGo5kahm0JDWPe7mwqhGTHr2g8/edit"); // Replace with  form URL
+//console.log("dataSheetValues[0][i].length:: ", dataSheetValues[0].length);
+let rowIndex = -1;
+    for (let i = 0; i < dataSheetValues[0].length; i++) {
+        const dropdownQuestionTitle = dataSheetValues[0][i]; // Title of dropdown question in the form
+        const dropdownItem = form.getItems(FormApp.ItemType.GRID).find(item => item.getTitle() === dropdownQuestionTitle);
+      //console.log("dropdownItem:: ", dropdownItem," ::dropdownQuestionTitle:: ", dropdownQuestionTitle);
+        if (dropdownItem) {
+          const lastRow = dataSheet.getLastRow();
+          const columnLetter = String.fromCharCode(64 + i+1); // Convert column number to letter (1=A, 2=B, etc.)
+          const rangeStringCol = columnLetter + "2:" + columnLetter + "5";
+          const rangeStringRow = columnLetter + "6:" + columnLetter + lastRow;
+          const rowChoices = dataSheet.getRange(rangeStringRow).getValues().flat();
+          const colChoices = dataSheet.getRange(rangeStringCol).getValues().flat();
+          // Filter out empty strings and null/undefined values
+          const filteredRowChoices = rowChoices.filter(value => value !== "" && value !== null && typeof value !== 'undefined');
+          const filteredColChoices = colChoices.filter(value => value !== "" && value !== null && typeof value !== 'undefined');
+
+      //console.log("columnLetter:: ", columnLetter," ::rangeString:: ", rangeString," ::choices:: ",filteredRowChoices," :: ",filteredColChoices);
+          dropdownItem.asGridItem().setRows(filteredRowChoices).setColumns(filteredColChoices);
+        }
+        }
+    }
