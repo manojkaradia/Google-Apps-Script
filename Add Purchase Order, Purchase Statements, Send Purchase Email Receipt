@@ -1,0 +1,57 @@
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  //Collect the data.
+  const purchaseOrderData = ss.getRangeByName("PurchaseOrder");
+  const clearName = ss.getRangeByName("ClearG");
+  const clearPayment = ss.getRangeByName("ClearH");
+  const transactionDestination = ss.getSheetByName("PURCHASE ORDERS");
+
+  const paymentDataValues = purchaseOrderData.getValues().flat();
+  const clearNameValues = clearName.getValues().flat();
+  const clearPaymentValues = clearPayment.getValues().flat();
+
+  //Validate that Client name & Payment details are filled.
+  if(clearNameValues == ""){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter client name before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+  //const emptypCell = clearPayment.findIndex(cell => cell == "");
+  if(clearPaymentValues[1] == ""){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter purchase amount before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  //Gather current date time state and user email.
+  const date = new Date();
+  const email = Session.getActiveUser().getEmail();
+  const data = [...paymentDataValues, email,date];
+  
+
+  //Append the data in a sheet.
+  transactionDestination.appendRow(data);
+
+  //Send Purchase receipt as an email.
+  var recipient = paymentDataValues[3];
+    var subject = "Purchase Receipt";
+    var userName = paymentDataValues[0]; // This is the variable you want to include
+    var userItem = paymentDataValues[4];
+    var userPayment = paymentDataValues[5];
+    var message = "Dear " + userName + ",\n\n We have purchased "+userItem+" for a payment of Rs. "+userPayment+". \n Thanks for doing business with us.\n\nSincerely,\n\n\nPowered by PlayCoda.com";
+  if(recipient){
+  MailApp.sendEmail(recipient, subject, message);
+  };
+
+
+  //clear the source sheet rows.
+      clearName.clearContent();
+      clearPayment.clearContent();
+  ss.toast("Purchase Order Added Successfully.");
