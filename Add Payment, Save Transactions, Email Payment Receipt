@@ -1,0 +1,55 @@
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  //Collect the data.
+  const paymentData = ss.getRangeByName("AddPayment");
+  const clearName = ss.getRangeByName("ClearE");
+  const clearPayment = ss.getRangeByName("ClearF");
+  const transactionDestination = ss.getSheetByName("TRANSACTIONS");
+
+  const paymentDataValues = paymentData.getValues().flat();
+  const clearNameValues = clearName.getValues().flat();
+  const clearPaymentValues = clearPayment.getValues().flat();
+
+  //Validate that Client name & Payment details are filled.
+  if(clearNameValues == ""){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter client name before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+  //const emptypCell = clearPayment.findIndex(cell => cell == "");
+  if(clearPaymentValues == ""){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter amount received today before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  //Gather current date time state and user email.
+  const date = new Date();
+  const email = Session.getActiveUser().getEmail();
+  const data = [...paymentDataValues, email,date];
+  
+
+  //Append the data in a sheet.
+  transactionDestination.appendRow(data);
+
+  //Send Payment receipt as an email.
+  var recipient = paymentDataValues[3];
+    var subject = "Payment Receipt";
+    var userName = paymentDataValues[0]; // This is the variable you want to include
+    var userPayment = paymentDataValues[4];
+    var message = "Dear " + userName + ",\n\n We have received a payment of Rs. "+userPayment+". \n Thanks for doing business with us.\n\nSincerely,\nTeam PlayCoda";
+
+    MailApp.sendEmail(recipient, subject, message);
+
+
+  //clear the source sheet rows.
+      clearName.clearContent();
+      clearPayment.clearContent();
+  ss.toast("Payment Added Successfully.");
