@@ -1,0 +1,295 @@
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const formTemplet = DriveApp.getFileById('your templete drive id');
+  const destinationFolder= DriveApp.getFolderById('your destination folder drive id');
+  const sheetCrm = ss.getSheetByName('INVOICE');
+
+  //Collect the data.
+  const clearRangeA = ss.getRangeByName("ClearA");
+  const buyerRange = ss.getRangeByName("Buyer");
+  const buyerDetailRange = ss.getRangeByName("BuyerDetail");
+  const consigneeRange = ss.getRangeByName("Consignee");
+  const consigneeDetailRange = ss.getRangeByName("ConsigneeDetail");
+  const serialRange = ss.getRangeByName("Serial");
+  const clearRangeB = ss.getRangeByName("ClearB");
+  const sizeRange = ss.getRangeByName("Size");
+  const hsnRange = ss.getRangeByName("HSN");
+  const clearRangeC = ss.getRangeByName("ClearC");
+  const unitRange = ss.getRangeByName("UNIT");
+  const clearRangeD = ss.getRangeByName("ClearD");
+  const sellPriceRange = ss.getRangeByName("SellPrice");
+  const amountRange = ss.getRangeByName("Amount");
+  const orderTermsRange = ss.getRangeByName("OrderTerms");
+
+  const buyerValues = buyerRange.getValues().flat();
+  const buyerDetailValues = buyerDetailRange.getValues().flat();
+  const consigneeValues = consigneeRange.getValues().flat();
+  const consigneeDetailValues = consigneeDetailRange.getValues().flat();
+  const serialValues = serialRange.getValues().flat();
+  const clearBValues = clearRangeB.getValues().flat();
+  const hsnValues = hsnRange.getValues().flat();
+  const sizeValues = sizeRange.getValues().flat();
+  const clearCValues = clearRangeC.getValues().flat();
+  const unitValues = unitRange.getValues().flat();
+  const clearDValues = clearRangeD.getValues().flat();
+  const sellPriceValues = sellPriceRange.getValues().flat();
+  const amountValues = amountRange.getValues().flat();
+  const orderTermsValues = orderTermsRange.getValues().flat();
+  //console.log(buyerValues,":::",consigneeValues,":::",amountValues);
+
+  //Validate that all the cells are filled.
+  /*const emptyCell = clearCValues.findIndex(cell => cell == "");
+  if(emptyCell !== -1){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter date & mark attendance for all morning staff before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }*/
+  const option = {
+    //weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    //hour: '2-digit',
+    //minute: '2-digit',
+    //second: '2-digit',
+    //timeZoneName: 'short'
+  };
+  const option1 = {
+    //weekday: 'long',
+    //year: 'numeric',
+    month: 'short',
+    //day: 'numeric',
+    //hour: '2-digit',
+    //minute: '2-digit',
+    //second: '2-digit',
+    //timeZoneName: 'short'
+  };
+  const option2 = {
+    //weekday: 'long',
+    year: 'numeric',
+    //month: 'short',
+    //day: 'numeric',
+    //hour: '2-digit',
+    //minute: '2-digit',
+    //second: '2-digit',
+    //timeZoneName: 'short'
+  };
+  const dateToday = new Date().toLocaleString('en-US',option);
+  const orderDate = new Date(orderTermsValues[1]).toLocaleString('en-US',option);
+  const monthToday = new Date().toLocaleString('en-US',option1);
+  const yearToday = new Date().toLocaleString('en-US',option2);
+  const count = getPersistentCounter();
+  const lastFive = buyerValues[1].slice(-5);
+  const firstTwo = buyerValues[1].substring(0, 2);
+  const fileName = "INV_"+count+"/"+monthToday+"/"+yearToday+"/"+lastFive;
+  const copyTempletDoc = formTemplet.makeCopy(fileName,destinationFolder);
+  const generatedForm = DocumentApp.openById(copyTempletDoc.getId());
+  const body = generatedForm.getBody();
+
+  //replace variables with specific texts
+  body.replaceText('<<Number>>',fileName);
+  body.replaceText('<<Date>>',dateToday);
+  body.replaceText('<<BuyerName>>',buyerValues[0]);
+  body.replaceText('<<BuyerGSTIN>>',buyerValues[1]);
+  body.replaceText('<<BuyerEmail>>',buyerValues[2]);
+  body.replaceText('<<BuyerAddress>>',buyerDetailValues[0]);
+  body.replaceText('<<ConsigneeName>>',consigneeValues[0]);
+  body.replaceText('<<ConsigneeGSTIN>>',consigneeValues[1]);
+  body.replaceText('<<ConsigneeEmail>>',consigneeValues[2]);
+  body.replaceText('<<ConsigneeAddress>>',consigneeDetailValues[0]);
+  body.replaceText('<<sl1>>',serialValues[0]);
+  body.replaceText('<<sl2>>',serialValues[1]);
+  body.replaceText('<<sl3>>',serialValues[2]);
+  body.replaceText('<<sl4>>',serialValues[3]);
+  body.replaceText('<<sl5>>',serialValues[4]);
+  body.replaceText('<<sl6>>',serialValues[5]);
+  body.replaceText('<<sl7>>',serialValues[6]);
+  body.replaceText('<<sl8>>',serialValues[7]);
+  body.replaceText('<<sl9>>',serialValues[8]);
+  body.replaceText('<<sl10>>',serialValues[9]);
+  body.replaceText('<<sl11>>',serialValues[10]);
+  body.replaceText('<<sl12>>',serialValues[11]);
+  body.replaceText('<<sl13>>',serialValues[12]);
+  body.replaceText('<<sl14>>',serialValues[13]);
+  body.replaceText('<<sl15>>',serialValues[14]);
+
+  body.replaceText('<<goods1>>',clearBValues[0]);
+  body.replaceText('<<goods2>>',clearBValues[1]);
+  body.replaceText('<<goods3>>',clearBValues[2]);
+  body.replaceText('<<goods4>>',clearBValues[3]);
+  body.replaceText('<<goods5>>',clearBValues[4]);
+  body.replaceText('<<goods6>>',clearBValues[5]);
+  body.replaceText('<<goods7>>',clearBValues[6]);
+  body.replaceText('<<goods8>>',clearBValues[7]);
+  body.replaceText('<<goods9>>',clearBValues[8]);
+  body.replaceText('<<goods10>>',clearBValues[9]);
+  body.replaceText('<<goods11>>',clearBValues[10]);
+  body.replaceText('<<goods12>>',clearBValues[11]);
+  body.replaceText('<<goods13>>',clearBValues[12]);
+  body.replaceText('<<goods14>>',clearBValues[13]);
+  body.replaceText('<<goods15>>',clearBValues[14]);
+
+  body.replaceText('<<hsn1>>',hsnValues[0]);
+  body.replaceText('<<hsn2>>',hsnValues[1]);
+  body.replaceText('<<hsn3>>',hsnValues[2]);
+  body.replaceText('<<hsn4>>',hsnValues[3]);
+  body.replaceText('<<hsn5>>',hsnValues[4]);
+  body.replaceText('<<hsn6>>',hsnValues[5]);
+  body.replaceText('<<hsn7>>',hsnValues[6]);
+  body.replaceText('<<hsn8>>',hsnValues[7]);
+  body.replaceText('<<hsn9>>',hsnValues[8]);
+  body.replaceText('<<hsn10>>',hsnValues[9]);
+  body.replaceText('<<hsn11>>',hsnValues[10]);
+  body.replaceText('<<hsn12>>',hsnValues[11]);
+  body.replaceText('<<hsn13>>',hsnValues[12]);
+  body.replaceText('<<hsn14>>',hsnValues[13]);
+  body.replaceText('<<hsn15>>',hsnValues[14]);
+
+  body.replaceText('<<size1>>',sizeValues[0]);
+  body.replaceText('<<size2>>',sizeValues[1]);
+  body.replaceText('<<size3>>',sizeValues[2]);
+  body.replaceText('<<size4>>',sizeValues[3]);
+  body.replaceText('<<size5>>',sizeValues[4]);
+  body.replaceText('<<size6>>',sizeValues[5]);
+  body.replaceText('<<size7>>',sizeValues[6]);
+  body.replaceText('<<size8>>',sizeValues[7]);
+  body.replaceText('<<size9>>',sizeValues[8]);
+  body.replaceText('<<size10>>',sizeValues[9]);
+  body.replaceText('<<size11>>',sizeValues[10]);
+  body.replaceText('<<size12>>',sizeValues[11]);
+  body.replaceText('<<size13>>',sizeValues[12]);
+  body.replaceText('<<size14>>',sizeValues[13]);
+  body.replaceText('<<size15>>',sizeValues[14]);
+
+  body.replaceText('<<quantity1>>',clearCValues[0]);
+  body.replaceText('<<quantity2>>',clearCValues[1]);
+  body.replaceText('<<quantity3>>',clearCValues[2]);
+  body.replaceText('<<quantity4>>',clearCValues[3]);
+  body.replaceText('<<quantity5>>',clearCValues[4]);
+  body.replaceText('<<quantity6>>',clearCValues[5]);
+  body.replaceText('<<quantity7>>',clearCValues[6]);
+  body.replaceText('<<quantity8>>',clearCValues[7]);
+  body.replaceText('<<quantity9>>',clearCValues[8]);
+  body.replaceText('<<quantity10>>',clearCValues[9]);
+  body.replaceText('<<quantity11>>',clearCValues[10]);
+  body.replaceText('<<quantity12>>',clearCValues[11]);
+  body.replaceText('<<quantity13>>',clearCValues[12]);
+  body.replaceText('<<quantity14>>',clearCValues[13]);
+  body.replaceText('<<quantity15>>',clearCValues[14]);
+
+  body.replaceText('<<unit1>>',unitValues[0]);
+  body.replaceText('<<unit2>>',unitValues[1]);
+  body.replaceText('<<unit3>>',unitValues[2]);
+  body.replaceText('<<unit4>>',unitValues[3]);
+  body.replaceText('<<unit5>>',unitValues[4]);
+  body.replaceText('<<unit6>>',unitValues[5]);
+  body.replaceText('<<unit7>>',unitValues[6]);
+  body.replaceText('<<unit8>>',unitValues[7]);
+  body.replaceText('<<unit9>>',unitValues[8]);
+  body.replaceText('<<unit10>>',unitValues[9]);
+  body.replaceText('<<unit11>>',unitValues[10]);
+  body.replaceText('<<unit12>>',unitValues[11]);
+  body.replaceText('<<unit13>>',unitValues[12]);
+  body.replaceText('<<unit14>>',unitValues[13]);
+  body.replaceText('<<unit15>>',unitValues[14]);
+
+  body.replaceText('<<disc1>>',clearDValues[0]);
+  body.replaceText('<<disc2>>',clearDValues[1]);
+  body.replaceText('<<disc3>>',clearDValues[2]);
+  body.replaceText('<<disc4>>',clearDValues[3]);
+  body.replaceText('<<disc5>>',clearDValues[4]);
+  body.replaceText('<<disc6>>',clearDValues[5]);
+  body.replaceText('<<disc7>>',clearDValues[6]);
+  body.replaceText('<<disc8>>',clearDValues[7]);
+  body.replaceText('<<disc9>>',clearDValues[8]);
+  body.replaceText('<<disc10>>',clearDValues[9]);
+  body.replaceText('<<disc11>>',clearDValues[10]);
+  body.replaceText('<<disc12>>',clearDValues[11]);
+  body.replaceText('<<disc13>>',clearDValues[12]);
+  body.replaceText('<<disc14>>',clearDValues[13]);
+  body.replaceText('<<disc15>>',clearDValues[14]);
+
+  body.replaceText('<<amt1>>',sellPriceValues[0]);
+  body.replaceText('<<amt2>>',sellPriceValues[1]);
+  body.replaceText('<<amt3>>',sellPriceValues[2]);
+  body.replaceText('<<amt4>>',sellPriceValues[3]);
+  body.replaceText('<<amt5>>',sellPriceValues[4]);
+  body.replaceText('<<amt6>>',sellPriceValues[5]);
+  body.replaceText('<<amt7>>',sellPriceValues[6]);
+  body.replaceText('<<amt8>>',sellPriceValues[7]);
+  body.replaceText('<<amt9>>',sellPriceValues[8]);
+  body.replaceText('<<amt10>>',sellPriceValues[9]);
+  body.replaceText('<<amt11>>',sellPriceValues[10]);
+  body.replaceText('<<amt12>>',sellPriceValues[11]);
+  body.replaceText('<<amt13>>',sellPriceValues[12]);
+  body.replaceText('<<amt14>>',sellPriceValues[13]);
+  body.replaceText('<<amt15>>',sellPriceValues[14]);
+  body.replaceText('<<sum>>',amountValues[0]);
+  body.replaceText('<<igst>>',amountValues[1]);
+  body.replaceText('<<sgst>>',amountValues[2]);
+  body.replaceText('<<rounding>>',amountValues[3]);
+  body.replaceText('<<cartage>>',amountValues[4]);
+  body.replaceText('<<totalval>>',amountValues[5]);
+  body.replaceText('<<OderNo>>',orderTermsValues[0]);
+
+  body.replaceText('<<PaymentMode>>',orderTermsValues[2]);
+  body.replaceText('<<DeliveryTerms>>',orderTermsValues[3]);
+    if (firstTwo=="08") {
+      body.replaceText('<<IgstCgst>>',"CGST(9%)");
+      body.replaceText('<<SgstH>>',"SGST(9%)");
+    } else {
+      body.replaceText('<<IgstCgst>>',"IGST(18%)");
+      body.replaceText('<<SgstH>>',"");
+    }
+    if (orderDate=="Invalid Date") {
+      body.replaceText('<<Dated>>',"");
+    } else {
+      body.replaceText('<<Dated>>',orderDate);
+    }
+
+  //console.log("total= ",amountValues[4]);
+  generatedForm.saveAndClose();
+  // 4. Convert the generated document to PDF
+    const pdfBlob = copyTempletDoc.getAs(MimeType.PDF);
+    const pdfFile = destinationFolder.createFile(pdfBlob).setName(fileName);
+
+  const generatedFormUrl= pdfFile.getUrl();
+  sheetCrm.getRange(3,11).setValue(generatedFormUrl);
+  const date =new Date()
+  const data = [...buyerValues,...consigneeValues,...amountValues,date,fileName,generatedFormUrl];
+  //console.log(data);
+
+  //Append the data in a sheet.
+  const destinationSheet = ss.getSheetByName("STATEMENTS");
+  destinationSheet.appendRow(data);
+
+  //Send Email to Buyer
+    const respondentEmail = buyerValues[2]; 
+    const fileId= getIdFromDriveUrl(generatedFormUrl);
+    const attachmentFile = DriveApp.getFileById(fileId);
+
+    // Email body
+    let emailBody = "<h2>Thank you for doing business with us</h2><p>Attachments has the invoice for your order.</p>";
+
+    // Define email subject
+    const subject = "Invoice For Your Order";
+
+    // Send the email
+    MailApp.sendEmail({
+      to: respondentEmail,
+      subject: subject,
+      htmlBody: emailBody,
+      attachments: [attachmentFile.getAs(MimeType.PDF)]
+    });
+
+  //clear the source sheet rows.
+  clearRangeA.clearContent();
+  clearRangeB.clearContent();
+  clearRangeC.clearContent();
+  sizeRange.clearContent();
+  clearRangeD.clearContent();
+  orderTermsRange.clearContent();
+  ss.toast("Invoice Generated Successfully.");
