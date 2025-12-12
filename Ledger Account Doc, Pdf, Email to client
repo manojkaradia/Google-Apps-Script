@@ -1,0 +1,157 @@
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const formTemplet = DriveApp.getFileById('1MVVi9DFxAQgY5zE3kMdHOYwR2ut5Fe2_NSklrhAraSw');
+    const destinationFolder= DriveApp.getFolderById('1xSwiTPYEQarazNkWxwOhuBPBNwrKDS5X');
+
+    //Collect the data.
+    const ledgerDetail = ss.getRangeByName("Ledger");
+    const clearName = ss.getRangeByName("ClearI");
+    const ledgerAccount = ss.getSheetByName("LEDGER ACCOUNT")
+    const ledgerData= ss.getRangeByName("LedgerData").getValues();
+
+
+  //console.log("ledgerData:: ",ledgerData)
+    const ledgerDetailValues = ledgerDetail.getValues().flat();
+    const clearNameValues = clearName.getValues().flat();
+
+  //Validate that Client name is filled.
+  if(clearNameValues == ""){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter client name before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+
+  const option = {
+    //weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    //hour: '2-digit',
+    //minute: '2-digit',
+    //second: '2-digit',
+    //timeZoneName: 'short'
+  };
+  const option1 = {
+    //weekday: 'long',
+    //year: 'numeric',
+    month: 'short',
+    //day: 'numeric',
+    //hour: '2-digit',
+    //minute: '2-digit',
+    //second: '2-digit',
+    //timeZoneName: 'short'
+  };
+  const option2 = {
+    //weekday: 'long',
+    year: 'numeric',
+    //month: 'short',
+    //day: 'numeric',
+    //hour: '2-digit',
+    //minute: '2-digit',
+    //second: '2-digit',
+    //timeZoneName: 'short'
+  };
+  const dateFrom = ledgerDetailValues[1].toLocaleString('en-US',option);
+  const dateTo = ledgerDetailValues[2].toLocaleString('en-US',option);
+  const monthToday = new Date().toLocaleString('en-US',option1);
+  const yearToday = new Date().toLocaleString('en-US',option2);
+  const count = getPersistentCounter();
+  const fileName = "Ledger_"+count+"/"+monthToday+"/"+yearToday;
+  const copyTempletDoc = formTemplet.makeCopy(fileName,destinationFolder);
+  const generatedForm = DocumentApp.openById(copyTempletDoc.getId());
+  const body = generatedForm.getBody();
+
+  //replace variables with specific texts
+  body.replaceText('<<Name>>',ledgerDetailValues[0]);
+  body.replaceText('<<Address>>',ledgerDetailValues[7]);
+  body.replaceText('<<FromDate>>',dateFrom);
+  body.replaceText('<<ToDate>>',dateTo);
+  body.replaceText('<<debit>>',ledgerDetailValues[4]);
+  body.replaceText('<<credit>>',ledgerDetailValues[5]);
+
+    const filledRows = ledgerData.filter(row => {
+      // Check if every cell in the row is truly empty (e.g., null, undefined, or empty string)
+      return row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== '');
+    });
+  // console.log("filledRows:: ",filledRows)
+
+  var formattedStrings = [];
+    for (var i = 0; i < filledRows.length; i++) {
+      var rowStrings = [];
+      for (var j = 0; j < filledRows[i].length; j++) {
+        var cellValue = filledRows[i][j];
+        // You can apply specific formatting here based on data type or desired output
+        if (cellValue instanceof Date) {
+          rowStrings.push(Utilities.formatDate(cellValue, ss.getSpreadsheetTimeZone(), "dd MMM, yyyy"));
+        } else {
+          rowStrings.push(cellValue); 
+        }
+      }
+      formattedStrings.push(rowStrings);
+    }
+    //var finalString = formattedStrings.join("\n"); // Join rows with a newline character
+    //Logger.log(finalString);
+    //body.appendListItem(finalString);
+
+  // Convert all values in the 2D array to strings
+    const stringifiedData = formattedStrings.map(row => 
+      row.map(cell => String(cell))
+    );
+  const table = body.appendTable(stringifiedData);
+
+        // Optional: Apply basic formatting to the header row (first row of the table)
+        const headerRow = table.getRow(0);
+        headerRow.editAsText().setBold(true);
+        //headerRow.setTextAlignment('center');
+        //headerRow.setBackgroundColor('#cccccc'); // Light grey background
+
+
+  // --- Insert data as a table ---
+    //if (ledgerData.length > 0) 
+      // Create a new table
+      //Logger.log("filledRows::",filledRows);
+    //body.appendTable(filledRows);
+    // Optional: Apply some basic formatting to the table
+    table.setColumnWidth(0, 80); // Set width for the first column
+    table.setColumnWidth(1, 100); // Set width for the second column
+    table.setColumnWidth(2, 50); // Set width for the third column
+    table.setColumnWidth(3, 130); // Set width for the forth column
+    table.setColumnWidth(4, 55); // Set width for the fifth column
+    table.setColumnWidth(5, 55); // Set width for the sixth column
+
+  generatedForm.saveAndClose();
+  // 4. Convert the generated document to PDF
+    const pdfBlob = copyTempletDoc.getAs(MimeType.PDF);
+    const pdfFile = destinationFolder.createFile(pdfBlob).setName(fileName);
+
+  const generatedFormUrl= pdfFile.getUrl();
+  ledgerAccount.getRange(1,6).setValue(generatedFormUrl);
+
+  //Send Email to Buyer
+    const respondentEmail = ledgerDetailValues[6]; 
+    const fileId= getIdFromDriveUrl(generatedFormUrl);
+    //const userName = ledgerDetailValues[0]; // This is the variable you want to include
+    const attachmentFile = DriveApp.getFileById(fileId);
+
+    // Email body
+    let emailBody = "<h2>Thank you for doing business with us</h2><p>Attachments has your account details.</p>";
+
+    // Define email subject
+    const subject ="Your Account Details";
+
+    // Send the email
+    MailApp.sendEmail({
+      to: respondentEmail,
+      subject: subject,
+      htmlBody: emailBody,
+      attachments: [attachmentFile.getAs(MimeType.PDF)]
+    });
+
+  //clear the source sheet rows.
+  clearName.clearContent();
+  ss.toast("Ledger Account Details Have Been Sent Successfully.");
