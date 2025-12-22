@@ -1,0 +1,32 @@
+// Get the active spreadsheet and the sheet where form responses are stored
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("MEMBERS");
+  // Get the last row of responses
+  const lastRow = sheet.getLastRow();
+  const lastResponse = sheet.getRange(lastRow, 1, 1,sheet.getLastColumn()).getValues()[0];
+
+  // email address is in the 13nd column, index 12
+  const respondentEmail = lastResponse[12]; 
+
+  // Get all questions (headers) from the first row
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+
+  // Create an HTML table for the email body
+  let emailBody = "<h2>Thank you for trusting us with your details. Your details have been sent to Gym management. Please go to the counter to complete the subscription process.</h2><p>Here's a summary of your responses powered by playcoda.com:</p><table border='1' cellpadding='5'>";
+
+  for (let i = 0; i < headers.length; i++) {
+    emailBody += `<tr><td><b>${headers[i]}</b></td><td>${lastResponse[i]}</td></tr>`;
+  }
+  emailBody += "</table>";
+
+  // Define email subject
+  const subject = "Gym Registration Successful";
+
+  // Send the email
+  if(respondentEmail){
+  MailApp.sendEmail({
+    to: respondentEmail,
+    subject: subject,
+    htmlBody: emailBody
+  });
+  };
