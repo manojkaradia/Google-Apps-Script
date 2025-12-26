@@ -1,0 +1,259 @@
+function addPayment() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const formTemplet = DriveApp.getFileById('Your payment receipt Templet google drive id');
+  const destinationFolder= DriveApp.getFolderById('you folder google drive id');
+
+  //Collect the data.
+  const sourceRange = ss.getRangeByName("AddPay");
+  const payRange = ss.getSheetByName("PAYMENT TRACKER");
+  const sourceId = ss.getRangeByName("AddPayName");
+  const payDateRange = ss.getRangeByName("PayDate");
+  const addPayAmount = ss.getRangeByName("AddPayAmount");
+  const addFinalFee = ss.getRangeByName("AddFinalFee");
+  const sourceValues = sourceRange.getValues().flat();
+  const payRangeValues = payRange.getDataRange().getValues();
+  const payDateRangeValues = payDateRange.getValues().flat();
+  const clearNameValues = sourceId.getValues().flat();
+  const clearPaymentValues = addPayAmount.getValues().flat();
+  //console.log(feeReceivednDateValues," ::: ",finalFeeValues, " :finalFee")
+
+  //Validate that Client name & Payment details are filled.
+  if(clearNameValues[0] == ""){
+    if(clearNameValues[1] == ""){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter either client name or contact number before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+  }
+  //const emptypCell = clearPayment.findIndex(cell => cell == "");
+  if(clearPaymentValues == ""){
+    const ui = SpreadsheetApp.getUi();
+    ui.alert(
+      "Incomplete Input.",
+      "Please enter amount received before submitting.",
+      ui.ButtonSet.OK
+    );
+    return;
+  }
+
+  // Format date
+  const option = {
+    //weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    //timeZoneName: 'short'
+  };
+  const option1 = {
+    //weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    //hour: '2-digit',
+    //minute: '2-digit',
+    //second: '2-digit',
+    //timeZoneName: 'short'
+  };
+
+  //Gather current date time state and user email.
+  const dateToday = new Date().toLocaleString('en-US',option1);
+  const date = new Date();
+  const email = Session.getActiveUser().getEmail();
+  const searchData = sourceValues[0]
+  //console.log(" :sourceValues: ",sourceValues[0]);
+
+  const lookupValue = searchData; // The value you want to find in lookUpColumnIndex
+  const lookUpColumnIndex = 6; // Name
+  const returnColumnIndex = 16; // Column P-Payment 1
+
+  // Get the specific cell using row and column numbers
+  const newValues = [
+    payDateRangeValues
+  ];
+  /*  const newFinalFeeValues = [
+    [finalFeeValues]
+  ];
+  const newFeenDateValues = [
+    feeReceivednDateValues
+  ];*/
+
+  //Search for Name in PAYMENT TRACKER and get row index
+  let rowIndex = -1;
+  for (let i = 0; i < payRangeValues.length; i++) {
+    //console.log("lookupValue:",lookupValue," :: ",payRangeValues[i][lookUpColumnIndex-1]);
+      if (payRangeValues[i][lookUpColumnIndex-1] === lookupValue) {
+          rowIndex = i;
+          break;
+      }
+  }
+
+  if (rowIndex !== -1) {
+    //payment receipt doc prep using sourceValues
+    const count = getPersistentCounter();
+    const paymentDate = new Date(sourceValues[5]).toLocaleString('en-US',option1);
+    const fileName = count+"_"+sourceValues[0]+"_"+paymentDate+"_Receipt";
+    const copyTempletDoc = formTemplet.makeCopy(fileName,destinationFolder);
+    const generatedForm = DocumentApp.openById(copyTempletDoc.getId());
+    const body = generatedForm.getBody();
+
+    //replace variables with specific texts
+    body.replaceText('<<Date>>',dateToday);
+    body.replaceText('<<Mr/Ms>>',sourceValues[0]);
+    body.replaceText('<<Fee Amount>>',sourceValues[4]);
+    body.replaceText('<<Payment Date>>',paymentDate);
+    body.replaceText('<<Subscription>>',"Gym Subscription");
+    //body.replaceText('<<Final Fee>>',sourceValues[6]);
+    body.replaceText('<<Total Payment Received>>',sourceValues[7]);
+    body.replaceText('<<Pending>>',sourceValues[8]);
+    body.replaceText('<<Receiver Email>>',email);
+
+    //set final fee
+    if(sourceValues[6]!=""){
+      payRange.getRange(rowIndex+1, returnColumnIndex-4, 1, 1).setValue(sourceValues[6]);
+      body.replaceText('<<Final Fee>>',sourceValues[6]);
+    } else{
+      body.replaceText('<<Final Fee>>',payRangeValues[rowIndex][returnColumnIndex-5]);
+    };
+
+    //set values of payment and date in payment tracker
+    if(payRangeValues[rowIndex][returnColumnIndex-1]==""){
+      body.replaceText('<<Fee Part>>',"1");
+      generatedForm.saveAndClose();
+      
+      // 4. Convert the generated document to PDF
+      const pdfBlob = copyTempletDoc.getAs(MimeType.PDF);
+      const pdfFile = destinationFolder.createFile(pdfBlob).setName(fileName);
+      const generatedPdfUrl= pdfFile.getUrl();
+      //set values here
+      payRange.getRange(rowIndex+1, returnColumnIndex+6, 1, 1).setValue(generatedPdfUrl);
+      payRange.getRange(rowIndex+1, returnColumnIndex, 1, 2).setValues(newValues);
+      
+      const data = [...sourceValues,generatedPdfUrl,email, date];
+      //console.log(" :sourceValues: ",sourceValues[0]);
+
+      //Save payment data in transactions sheet.
+      const destinationSheet = ss.getSheetByName("TRANSACTIONS");
+      destinationSheet.appendRow(data);
+    
+      //Send Email to Buyer
+      const respondentEmail = sourceValues[3]; 
+      //console.log(respondentEmail!=""," ::respondentEmail 1 :: ",respondentEmail);
+      if(respondentEmail!=""){
+      const fileId= getIdFromDriveUrl(generatedPdfUrl);
+      const attachmentFile = DriveApp.getFileById(fileId);
+      // Email body
+      let emailBody = "<h2>Thank you for being with us</h2><p>Attachments has your payment receipt powered by playcoda.com.</p>";
+
+      // Define email subject
+      const subject ="Your Payment Receipt";
+
+      // Send the email
+      MailApp.sendEmail({
+        to: respondentEmail,
+        subject: subject,
+        htmlBody: emailBody,
+        attachments: [attachmentFile.getAs(MimeType.PDF)]
+      });
+
+      }
+          
+    } else if(payRangeValues[rowIndex][returnColumnIndex+1]==""){
+      body.replaceText('<<Fee Part>>',"2");
+      generatedForm.saveAndClose();
+
+      // 4. Convert the generated document to PDF
+      const pdfBlob = copyTempletDoc.getAs(MimeType.PDF);
+      const pdfFile = destinationFolder.createFile(pdfBlob).setName(fileName);
+      const generatedPdfUrl= pdfFile.getUrl();
+
+      //set values here
+      payRange.getRange(rowIndex+1, returnColumnIndex+7, 1, 1).setValue(generatedPdfUrl);
+      payRange.getRange(rowIndex+1, returnColumnIndex+2, 1, 2).setValues(newValues);
+
+      const data = [...sourceValues,generatedPdfUrl,email, date];
+      //console.log(" :sourceValues: ",sourceValues[0]);
+
+      //Save payment data in transactions sheet.
+      const destinationSheet = ss.getSheetByName("TRANSACTIONS");
+      destinationSheet.appendRow(data);
+    
+      //Send Email to Buyer
+      const respondentEmail = sourceValues[3]; 
+      //console.log(respondentEmail!=""," ::respondentEmail 2:: ",respondentEmail);
+      if(respondentEmail!=""){
+      const fileId= getIdFromDriveUrl(generatedPdfUrl);
+      const attachmentFile = DriveApp.getFileById(fileId);
+      // Email body
+      let emailBody = "<h2>Thank you for being with us</h2><p>Attachments has your payment receipt powered by playcoda.com.</p>";
+
+      // Define email subject
+      const subject ="Your Payment Receipt";
+
+      // Send the email
+      MailApp.sendEmail({
+        to: respondentEmail,
+        subject: subject,
+        htmlBody: emailBody,
+        attachments: [attachmentFile.getAs(MimeType.PDF)]
+      });
+      }
+    } else {
+      body.replaceText('<<Fee Part>>',"3");
+      generatedForm.saveAndClose();
+      
+      // 4. Convert the generated document to PDF
+      const pdfBlob = copyTempletDoc.getAs(MimeType.PDF);
+      const pdfFile = destinationFolder.createFile(pdfBlob).setName(fileName);
+      const generatedPdfUrl= pdfFile.getUrl();
+
+      //set values here
+      payRange.getRange(rowIndex+1, returnColumnIndex+8, 1, 1).setValue(generatedPdfUrl);
+      payRange.getRange(rowIndex+1, returnColumnIndex+4, 1, 2).setValues(newValues);
+
+      const data = [...sourceValues,generatedPdfUrl,email, date];
+      //console.log(" :sourceValues: ",sourceValues[0]);
+
+      //Save payment data in transactions sheet.
+      const destinationSheet = ss.getSheetByName("TRANSACTIONS");
+      destinationSheet.appendRow(data);
+    
+      //Send Email to Buyer
+      const respondentEmail = sourceValues[3]; 
+      // console.log(respondentEmail!=""," ::respondentEmail 3:: ",respondentEmail);
+      if(respondentEmail!=""){
+      const fileId= getIdFromDriveUrl(generatedPdfUrl);
+      const attachmentFile = DriveApp.getFileById(fileId);
+      // Email body
+      let emailBody = "<h2>Thank you for being with us</h2><p>Attachments has your payment receipt powered by playcoda.com.</p>";
+
+      // Define email subject
+      const subject ="Your Payment Receipt";
+
+      // Send the email
+      MailApp.sendEmail({
+        to: respondentEmail,
+        subject: subject,
+        htmlBody: emailBody,
+        attachments: [attachmentFile.getAs(MimeType.PDF)]
+      });
+      }
+
+    }
+  } else {
+        // Or handle the case where no match is found
+  }
+
+
+  //clear the source sheet rows.
+  sourceId.clearContent();
+  addPayAmount.clearContent();
+  addFinalFee.clearContent();
+  ss.toast("Payment Added Successfully.");
+}
