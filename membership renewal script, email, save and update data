@@ -1,0 +1,96 @@
+function saveRenewalMemberData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  //Collect the data.
+  const sourceRange = ss.getRangeByName("MemberPaymentHistory");
+  const searchRange = ss.getSheetByName("MEMBERS");
+  const payRange = ss.getSheetByName("PAYMENT TRACKER");
+  const sourceId = ss.getRangeByName("NM");
+  const renewRange = ss.getRangeByName("RenewRange");
+ // const finalFee = ss.getRangeByName("FinalFee");
+ // const feeReceivednDate = ss.getRangeByName("FeeReceivednDate");
+  const sourceValues = sourceRange.getValues().flat();
+  const payRangeValues = payRange.getDataRange().getValues();
+  const searchRangeValues = searchRange.getDataRange().getValues();
+  const renewRangeValues = renewRange.getValues().flat();
+  //const feeReceivednDateValues = feeReceivednDate.getValues().flat();
+  //const finalFeeValues = finalFee.getValue();
+  console.log("payRangeValues::: ",payRangeValues);
+
+  //Gather current date time state and user email.
+  const date = new Date();
+  const email = Session.getActiveUser().getEmail();
+  const data = [...sourceValues, email, date];
+  const searchData = sourceValues[0]
+  //console.log(" :sourceValues: ",sourceValues[0]);
+
+  //Save renewal member data in renewal hystory sheet.
+  const destinationSheet = ss.getSheetByName("Renewed Member History");
+  destinationSheet.appendRow(data);
+
+  const lookupValue = searchData; // The value you want to find in column A
+  const targetColumnIndex = 6; // Column F-Membership Start Date
+  const lookUpColumnIndex = 1; // ID
+  const returnColumnIndex = 15; // Column P-Fee part 1
+
+  // Get the specific cell using row and column numbers
+  const newValues = [
+          renewRangeValues
+        ];
+   /*
+    const newFinalFeeValues = [
+      [finalFeeValues]
+    ];
+    const newFeenDateValues = [
+      feeReceivednDateValues
+    ];
+    */
+    //console.log("lookupValue:",lookupValue," :: ",targetColumnIndex);
+  const cell = searchRange.getRange(lookupValue+1,targetColumnIndex,1,2);
+        cell.setValues(newValues);
+
+
+  //Search for ID in PAYMENT TRACKER and get row index
+  let rowIndex = -1;
+    for (let i = 0; i < payRangeValues.length; i++) {
+        if (payRangeValues[i][lookUpColumnIndex] === lookupValue) {
+            rowIndex = i;
+            break;
+        }
+    }
+  //Set new values of final fee, payment & date
+  if (rowIndex !== -1) {
+      payRange.getRange(rowIndex+1, returnColumnIndex+1, 1, 6).clearContent();
+      payRange.getRange(rowIndex+1, returnColumnIndex-3, 1, 1).clearContent();
+      //payRange.getRange(rowIndex+1, returnColumnIndex-3, 1, 1).setValues(newFinalFeeValues);
+      //payRange.getRange(rowIndex+1, returnColumnIndex+1, 1, 2).setValues(newFeenDateValues);
+      //console.log(rowIndex, ", rowIndex, ", payRangeValues[rowIndex][returnColumnIndex], " payRangeValues index value");
+  } else {
+        // Or handle the case where no match is found
+  };
+
+  //send email
+  const option1 = {
+        //weekday: 'long',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        //hour: '2-digit',
+        //minute: '2-digit',
+        //second: '2-digit',
+        //timeZoneName: 'short'
+      };
+  const renewDate = new Date(renewRangeValues[0]).toLocaleString('en-US',option1);
+  const recipientEmail = searchRangeValues[lookupValue][12];
+  const recipientName = searchRangeValues[lookupValue][3];
+  const subject = `Membership Renewed Successfully`;
+  const body = `Dear ${recipientName}, \n\nYour Gym Membership has been renewed on ${renewDate}. \n\n\nPowered By playcoda.com`;
+  //console.log("Email Jayega");
+  if (recipientEmail) { // Ensure there's an email address
+    GmailApp.sendEmail(recipientEmail, subject, body);
+  }
+
+  //clear the source sheet rows.
+  sourceId.clearContent();
+  ss.toast("Membership Renewed Successfully.");
+}
